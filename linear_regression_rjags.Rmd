@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+ **Knit** 
 
 ```{r cars}
 library("car")
@@ -32,6 +32,22 @@ str(Leinhardt)
 ```{r}
 pairs(Leinhardt)
 ```
+
+infant mortality and income doesn't like a linear relationshiop
+
+```{r}
+plot(infant ~ income, data=Leinhardt)
+```
+In fact, both of these variables are extremely right skewed(Matthew Heiner). Let's look at a histogram of each one individually.
+
+```{r}
+hist(Leinhardt$infant)
+```
+
+```{r}
+hist(Leinhardt$income)
+```
+
 
 ## Bayesian Linear Regression using jags
 
