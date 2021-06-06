@@ -48,12 +48,22 @@ hist(Leinhardt$infant)
 hist(Leinhardt$income)
 ```
 
+A linear regression is not appropriate for these variables.
+We could try looking at this on the log scale. Let's recreate these plots now with variables that are transformed.
+
+```{r}
+Leinhardt$loginfant = log(Leinhardt$infant)
+Leinhardt$logincome = log(Leinhardt$income)
+plot(loginfant ~ logincome, data=Leinhardt)
+```
+
+## Modeling
 
 ## Bayesian Linear Regression using jags
 
 以下JAGS 來分析資料
 
-## Including Plots
+# Including Plots
 
 You can also embed plots, for example:
 
