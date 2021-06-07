@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## 貝氏迴歸分析使用R 及 car package 
+## Bayesian Linear Regression Using R and JAGS 
 
 使用 `car` 套件中的 `Leinhardt` 資料庫 
 
@@ -23,7 +23,7 @@ data("Leinhardt")
 ?Leinhardt
 head(Leinhardt)
 ```
-使用  `str`function 了解 `Leinhardt` 資料庫有哪些資料類別
+Using  `str`function to understand `Leinhardt` dataset contained variables.
 
 ```{r}
 str(Leinhardt)
@@ -58,12 +58,101 @@ plot(loginfant ~ logincome, data=Leinhardt)
 ```
 
 ## Modeling
+Now using logcincome as the independent variable and loginfant as the dependent variable to fit linear regression.
 
-## Bayesian Linear Regression using jags
+```{r}
+lmod = lm(loginfant ~ logincome, data=Leinhardt)
+summary(lmod)
+```
+Under non-informative flat prior, here are the estimates, the posterior mean estimates for the coefficients. 
 
-以下JAGS 來分析資料
+These estimates are relative to theri standard error, or in these case, standard deviation of the posterior distribution. And they appear to be very statisstatistically significant.
 
-# Including Plots
+Residual standard error gives us an estimate of the left over variance after fitting the model. The R squared statistics tell us how much of the variability
+is explained by the linear model, in this case about half.
+
+From the results above, we can see that 4 observations were deleted. They were not used in the model because they contained missing values.
+
+Now delete the observations that have missing values before we perform analysis. we can save a new dataset  called it dat. To do this in R, we use na.omit and we give it the data set.
+
+```{r}
+dat = na.omit(Leinhardt)
+```
+
+
+## Bayesian Linear Regression using JAGS
+Now, load rjags in R
+```{r}
+library("rjags")
+```
+Below are jags codes for the infant motality data.
+```{r}
+mod1_string = " model {
+    for (i in 1:n) {
+        y[i] ~ dnorm(mu[i], prec)
+        mu[i] = b[1] + b[2]*log_income[i] 
+    }
+    
+    for (i in 1:2) {
+        b[i] ~ dnorm(0.0, 1.0/1.0e6)
+    }
+    
+    prec ~ dgamma(5/2.0, 5*10.0/2.0)
+    sig2 = 1.0 / prec
+    sig = sqrt(sig2)
+} "
+
+set.seed(72)
+data1_jags = list(y=dat$loginfant, n=nrow(dat), 
+              log_income=dat$logincome)
+
+params1 = c("b", "sig")
+
+inits1 = function() {
+    inits = list("b"=rnorm(2,0.0,100.0), "prec"=rgamma(1,1.0,1.0))
+}
+
+mod1 = jags.model(textConnection(mod1_string), data=data1_jags, inits=inits1, n.chains=3)
+update(mod1, 1000) # burn-in
+
+mod1_sim = coda.samples(model=mod1,
+                        variable.names=params1,
+                        n.iter=5000)
+
+mod1_csim = do.call(rbind, mod1_sim) # combine multiple chains
+```
+
+
+# Checking MCMC convergence
+We have to judge whether the chains have reached convergence or not by three methods: 
+We start with trace plot
+
+```{r}
+plot(mod1_sim)
+```
+
+The first one is Gelman & Rubin diagostics
+```{r}
+gelman.diag(mod1_sim)
+```
+
+The protential scale reduction factors for the three different parameters is very close to 1, indicating that the chains have converged.
+
+Now, let us look at autocorrelation
+
+```{r}
+autocorr.diag(mod1_sim)
+```
+
+We can see very high auto correlation with the initial lags in the intercept term, as well as our second data term for the slope.
+Now let us check the effective sample size:
+
+```{r}
+effectiveSize(mod1_sim)
+```
+
+Recall, we ran the chain for 5000 iterations for 3 different chains, so we should have about 15000 samples. Out of those 15000 samples, 
+our effective sample size for beta_1, or the intercept, is only 350 and so on. The sigma parameter mixed very well, our coefficents no so much.
 
 You can also embed plots, for example:
 
