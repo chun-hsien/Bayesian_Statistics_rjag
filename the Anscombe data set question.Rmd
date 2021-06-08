@@ -1,0 +1,50 @@
+---
+title: "Lesson 7 Part A"
+author: "Chun Hsien Wu"
+date: "2021年6月8日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Anscombe data set bayesian analysis using JAGS
+
+#### Question 3 
+Consider the Anscombe data set in R
+Suppose we are interested in relating per-capita education expenditures to the other three variables. Which variable appears to have the strongest linear relationship with per-capita education expenditures?
+
+```{r}
+library("car")  # load the 'car' package
+data("Anscombe")  # load the data set
+?Anscombe  # read a description of the data
+head(Anscombe)  # look at the first few lines of the data
+pairs(Anscombe)  # scatter plots for each pair of variables
+```
+
+```{r}
+lmod = lm(education ~ income + young + urban, data=Anscombe)
+summary(lmod)
+```
+The answer is **Per-capita** generally co -coour with increases in education expenditures.
+
+#### Question 4
+Fit a reference (noninformative) Bayesian linear model to the Anscombe data with education expenditures as the response variable and include all three other variables as predictors. Use the lm function in R.
+
+What is the posterior mean estimate of the intercept in this model? Round your answer to one decimal place.
+
+```{r}
+lmod = lm(education ~ income + young + urban, data=Anscombe)
+summary(lmod)
+```
+
+The answer is **-2.868**
+
+## Including Plots
+You can also embed plots, for example:
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
