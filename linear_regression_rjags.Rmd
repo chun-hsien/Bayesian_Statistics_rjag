@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Bayesian Linear Regression Using R and JAGS 
+### Bayesian Linear Regression Using R and JAGS 
 
 使用 `car` 套件中的 `Leinhardt` 資料庫 
 
@@ -57,7 +57,7 @@ Leinhardt$logincome = log(Leinhardt$income)
 plot(loginfant ~ logincome, data=Leinhardt)
 ```
 
-## Modeling
+### Modeling
 Now using logcincome as the independent variable and loginfant as the dependent variable to fit linear regression.
 
 ```{r}
@@ -123,7 +123,7 @@ mod1_csim = do.call(rbind, mod1_sim) # combine multiple chains
 ```
 
 
-# Checking MCMC convergence
+### Checking MCMC convergence
 We have to judge whether the chains have reached convergence or not by three methods: 
 We start with trace plot
 
@@ -154,8 +154,72 @@ effectiveSize(mod1_sim)
 Recall, we ran the chain for 5000 iterations for 3 different chains, so we should have about 15000 samples. Out of those 15000 samples, 
 our effective sample size for beta_1, or the intercept, is only 350 and so on. The sigma parameter mixed very well, our coefficents no so much.
 
-You can also embed plots, for example:
+Look at a posterior summary from this model:
 
+```{r}
+summary(mod1_sim)
+```
+
+We use the first 1000 samples as a burnin, then we saved the next 5000 sampls.
+Look at a posterior summary from this model.
+
+### Residuals
+The last thing we'll do in this segment is to check the residuals. Residuals are defined as the difference between the response, 
+the actual observation, and the model's prediction for each value.
+Residuals are extremely important in linear modeling, since residuals can reveal violations in the assumptions we made to specify the model.
+In particular, we are looking for any sign that the model is not linear, that is not normally distributed, or that the observarions are not independent from each other, 
+at least conditionally on the explanatory variables.
+
+Let's look at what would have happen if we fit the reference linear model to the un-transformed variables.
+It didn't look like linear model was a good idea here.
+
+```{r}
+lmod0 = lm(infant ~ income, data = Leinhardt)
+plot(resid(lmod))
+```
+It gives us residuals on the y-axis and index on the x-axis. The index refers to which row of the dataset it came from. 
+If the data points were not independent from each other, we might see a pattern in this plot.
+Another very important look at the residuals is if we plot the prediction of the model:
+
+```{r}
+plot(predict(lmod0), resid(lmod0))
+```
+
+In this plot, we also don't want to see any patterns, we want to see essentially randomness. Which is **not** the case in this plot.
+In this plot, we also don't want to see any patterns, we want to see essentially randomness. Which is not the case in this plot.
+First of all, we can see a downward trend, as the value of the prediciton from the model get higher, the residuals get smaller.
+
+And the assumption that the residual variance is the same for all observartions appear to be wildly incorrect in this case.For all of these predicted values down here the variance in the residuals is quite small, but for large predicted values, we have large variance.
+
+#### normality
+We can check the assumption of normality using the qqnorm plot on the residuals
+
+```{r}
+qqnorm(resid(lmod0))
+```
+These plot shows the theoretical quantiles or percetiles of an actual normal distribution on the x-axis with the sample quantiles of the residuals on the y-axis.
+If the residuals actually came from a norml disbribution, the points on this plot would essentially follow a straight line.
+In this case, we have a curvature going up that increases and get more extreme at the high values.
+
+This indicates that the residuals have a distribution that is right skewed and not normal.
+
+Return to our model fit to the log transformed variables. we'll use our residual from our Bayesian model that we fit in JAGS.
+Predictions from Bayesian  models come as posterior predictive distributions. So in reality, with the Bayesian model all residuals, or
+all residuals or each residual, would have its own distribution. Now, let's look at the residuals that come only from predictions based on the posterior means.
+First, create the design matrix, the matrix that contains the explanatory variables, do that by cbinding, that is combining  columns, first, of the term that goes with the intercept.
+
+Return to our model fit to the log transformed variables. we'll use our residual from our Bayesian model that we fit in JAGS.
+Predictions from Bayesian  models come as posterior predictive distributions. So in reality, with the Bayesian model all residuals, or
+all residuals or each residual, would have its own distribution. Now, let's look at the residuals that come only from predictions based on the posterior means.
+First, create the design matrix, the matrix that contains the explanatory variables, do that by cbinding, that is combining  columns, first, of the term that goes with the intercept.
+
+We will repeat the number 1 n times, where n comes from data1_jags, we have saved the variables earlier.
+
+```{r}
+data1_jags$n
+```
+
+You can also embed plots, for example:
 ```{r pressure, echo=FALSE}
 plot(pressure)
 ```

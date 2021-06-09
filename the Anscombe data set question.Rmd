@@ -41,6 +41,12 @@ summary(lmod)
 
 The answer is **-2.868**
 
+####  5.Question 5
+In our reference analysis of the Anscombe data, the intercept is estimated to be negative. Does this parameter have a meaningful interpretation?
+ The answer is **No, it represents expected expenditures in a state with 0 average income, 0 percent youth, and 0 percent urban which doesn't exist. **
+ 
+The answer is 
+
 ## Including Plots
 You can also embed plots, for example:
 ```{r pressure, echo=FALSE}
