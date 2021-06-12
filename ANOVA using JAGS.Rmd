@@ -1,0 +1,98 @@
+---
+title: "ANOVA using JAGS"
+author: "Chun Hsien Wu"
+date: "2021年6月12日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### One way anova example
+#### Data
+```{r}
+data("PlantGrowth")
+head(PlantGrowth)
+```
+Because the explanatory variable group is a factor and not continuous, we choose to visualized the data with the data with box plots rather than scatter plots.
+
+```{r}
+boxplot(weight ~ group, data = PlantGrowth)
+```
+
+#### Modeling
+We can start with the reference analysis(with a noninformative prior) with a linear model in `R`
+```{r}
+lmod = lm(weight ~ group, data = PlantGrowth)
+summary(lmod)
+```
+```{r}
+anova(lmod)
+```
+Now, let's use JAGS to fit themodel
+```{r}
+library("rjags")
+
+mod_string = " model {
+	for (i in 1:length(y)) {
+		y[i] ~ dnorm(mu[grp[i]], prec)
+    	}
+    
+    	for (j in 1:3) {
+        	mu[j] ~ dnorm(0.0, 1.0/1.0e6)
+    	}
+    
+   	prec ~ dgamma(5/2.0, 5*1.0/2.0)
+	sig = sqrt( 1.0 / prec )
+} "
+
+data_jags = list(y=PlantGrowth$weight, 
+				grp=as.numeric(PlantGrowth$group))
+
+params = c("mu", "sig")
+
+inits = function() {
+    inits = list("mu"=rnorm(3,0.0,100.0), "prec"=rgamma(1,1.0,1.0))
+}
+
+mod = jags.model(textConnection(mod_string), data=data_jags, inits=inits, n.chains=3)
+
+# run 1000 iterations as burn in 
+update(mod, 1e3)
+
+# run 3 chains for 5000 iterations to save those samples, and combining the samples in the end.
+mod_sim = coda.samples(model=mod,
+                        variable.names=params,
+                        n.iter=5e3)
+# combined chains
+mod_csim = as.mcmc(do.call(rbind, mod_sim))
+```
+#### Model Checking
+Before we check the inferences from the model, we should perform convergence diagnostics for our Markov chains.
+```{r}
+plot(mod_sim)
+
+gelman.diag(mod_sim)
+autocorr.diag(mod_sim)
+effectiveSize(mod_sim) 
+```
+Let's calculate the posterior mean for the parameters
+```{r}
+(pm_params = colMeans(mod_csim))
+```
+We can also look at the residuals to see if there are any obvious problems with our model choice.
+
+Let's use these posterior means of the parameters to compute residuals. The first thing we need are predictions for 
+each observations, call that yhat. And it'll be based on the posterior means for theses parameters for the first three means.
+
+And we want to index these by their group indicator. So that comes from datajags the group variable.
+```{r}
+yhat = pm_params[1:3][data_jags$grp]
+resid = data_jags$y - yhat
+plot(resid)
+```
+
+#### Result
+
+`echo = FALSE` 

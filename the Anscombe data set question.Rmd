@@ -234,13 +234,7 @@ Using the model favored by the DIC, obtain  a Monte Carlo estimate of the poster
 income is positive(greater than 0.0). Round your answer to two decimal places.
 
 ```{r}
-print(summary(mod1_sim))
-print(mean(mod1_csim[,1] > 0.0))
-print(mean(mod1_csim[,1]))
-print(mean(mod1_csim[,2] ))
-print(mean(mod1_csim[,2] > 0.0))
-print(mean(mod1_csim[,]0))
-
+summary(mod1_sim)
 ```
 
 
