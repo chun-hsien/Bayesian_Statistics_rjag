@@ -1,5 +1,5 @@
 ---
-title: "Lesson 7 Part A"
+title: "Lesson 7 Part A, B Quizzs"
 author: "Chun Hsien Wu"
 date: "2021年6月8日"
 output: html_document
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Anscombe data set bayesian analysis using JAGS
 
-#### Question 3 
+#### Lesson 7 part A Question 3 
 Consider the Anscombe data set in R
 Suppose we are interested in relating per-capita education expenditures to the other three variables. Which variable appears to have the strongest linear relationship with per-capita education expenditures?
 
@@ -41,16 +41,206 @@ summary(lmod)
 
 The answer is **-2.868**
 
-####  5.Question 5
+
+#### Question 5
 In our reference analysis of the Anscombe data, the intercept is estimated to be negative. Does this parameter have a meaningful interpretation?
+ 
  The answer is **No, it represents expected expenditures in a state with 0 average income, 0 percent youth, and 0 percent urban which doesn't exist. **
  
-The answer is 
+### LESSON 7 PART B
+#### question 3
+Although the residual analysis of the Anscombe data showed no major problem that we will pursue, it is still worthwhile to compare some competing models. First, calculate and report the DIC for the original model (that you fit for the previous quiz). Round your answer to the nearest whole number.
 
-## Including Plots
-You can also embed plots, for example:
-```{r pressure, echo=FALSE}
-plot(pressure)
+Now, using JAGS
+```{r}
+library("rjags")
+
+mod1_string = " model {
+    for (i in 1:length(education)) {
+        education[i] ~ dnorm(mu[i], prec)
+        mu[i] = b0 + b[1]*income[i] + b[2]*young[i] + b[3]*urban[i]
+    }
+    
+    b0 ~ dnorm(0.0, 1.0/1.0e6)
+    for (i in 1:3) {
+        b[i] ~ dnorm(0.0, 1.0/1.0e6)
+    }
+    
+    prec ~ dgamma(1.0/2.0, 1.0*1500.0/2.0)
+    	## Initial guess of variance based on overall
+    	## variance of education variable. Uses low prior
+    	## effective sample size. Technically, this is not
+    	## a true 'prior', but it is not very informative.
+    sig2 = 1.0 / prec
+    sig = sqrt(sig2)
+} "
+
+
+
+set.seed(72)
+
+data_jags = as.list(Anscombe)
+
+params1 = c("b", "sig")
+
+inits1 = function() {
+    inits = list("b"=rnorm(3,0.0,100.0), "prec"=rgamma(1,1.0,1.0))
+}
+
+mod1 = jags.model(textConnection(mod1_string), data=data_jags, inits=inits1, n.chains=3)
+update(mod1, 10000) # burn-in
+
+mod1_sim = coda.samples(model=mod1,
+                        variable.names=params1,
+                        n.iter=5000)
+
+mod1_csim = do.call(rbind, mod1_sim) # combine multiple chains
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Before checking inferences from the model, we should perform convergence diagnostics for our markov chains.
+
+```{r}
+plot(mod1_sim)
+```
+
+```{r}
+gelman.diag(mod1_sim)
+autocorr.diag(mod1_sim)
+autocorr.plot(mod1_sim)
+
+```{r}
+effectiveSize(mod1_sim)
+```
+```{r}
+dic.samples(mod1, 1e5)
+```
+We can get a posterior summary of the parameters in model 1. This is our preferred because of the lowest DIC value.
+```{r}
+summary(mod1_sim)
+```
+
+##### Alternative model 2
+We will consider two alternative models for the Anscombe data. Because income and urban may be more highly correlated with each other than with education, and since urban was less significant than income in our models so far, we'll consider dropping it.
+
+Belows are model2 jags codes:
+```{r}
+mod2_string = " model {
+    for (i in 1:length(education)) {
+        education[i] ~ dnorm(mu[i], prec)
+        mu[i] = b0 + b[1]*income[i] + b[2]*young[i] 
+    }
+    
+    b0 ~ dnorm(0.0, 1.0/1.0e6)
+    for (i in 1:2) {
+        b[i] ~ dnorm(0.0, 1.0/1.0e6)
+    }
+    
+    prec ~ dgamma(1.0/2.0, 1.0*1500.0/2.0)
+
+    sig2 = 1.0 / prec
+    sig = sqrt(sig2)
+} "
+
+set.seed(72)
+
+# drop urban from Anscombe
+dat2 = subset(Anscombe, select = c("education", "income", "young"))
+
+dat2_jags = as.list(dat2)
+
+params2 = c("b", "sig")
+
+inits1 = function() {
+    inits = list("b"=rnorm(2,0.0,100.0), "prec"=rgamma(1,1.0,1.0))
+}
+
+mod2 = jags.model(textConnection(mod2_string), data=dat2_jags, inits=inits1, n.chains=3)
+update(mod2, 1000) # burn-in
+
+mod2_sim = coda.samples(model=mod2,
+                        variable.names=params2,
+                        n.iter=5000)
+
+mod2_csim = do.call(rbind, mod2_sim) # combine multiple chains
+
+# checking convergence
+gelman.diag(mod2_sim)
+autocorr.diag(mod2_sim)
+autocorr.plot(mod2_sim)
+
+# calculating DIC
+dic.samples(mod2,1.0e5)
+```
+##### Alternative model 3
+Question 4
+In addition to dropping urban, add an interaction terms b3 * income[i] * youth[i] and fit model in JAGS.
+
+Calculating the DIC, if predictive performance is our criterion, which model would you conclude performs best ?
+```{r}
+mod3_string = " model {
+    for (i in 1:length(education)) {
+        education[i] ~ dnorm(mu[i], prec)
+        mu[i] = b0 + b[1]*income[i] + b[2]*young[i] + b[3] * income[i] * young[i]
+    }
+    
+    b0 ~ dnorm(0.0, 1.0/1.0e6)
+    for (i in 1:3) {
+        b[i] ~ dnorm(0.0, 1.0/1.0e6)
+    }
+    
+    prec ~ dgamma(1.0/2.0, 1.0*1500.0/2.0)
+
+    sig2 = 1.0 / prec
+    sig = sqrt(sig2)
+} "
+
+set.seed(72)
+
+# drop urban from Anscombe
+dat3 = subset(Anscombe, select = c("education", "income", "young"))
+
+dat3_jags = as.list(dat3)
+
+params3 = c("b", "sig")
+
+inits1 = function() {
+    inits = list("b"=rnorm(3, 0.0, 100.0), "prec"=rgamma(1,1.0,1.0))
+}
+
+mod3 = jags.model(textConnection(mod3_string), data=dat3_jags, inits=inits1, n.chains=3)
+update(mod3, 1000) # burn-in
+
+mod3_sim = coda.samples(model=mod3,
+                        variable.names=params3,
+                        n.iter=5000)
+
+mod3_csim = do.call(rbind, mod3_sim) # combine multiple chains
+
+# checking convergence
+gelman.diag(mod3_sim)
+autocorr.diag(mod3_sim)
+autocorr.plot(mod3_sim)
+
+# calculating DIC
+dic.samples(mod3,1.0e5)
+```
+#### conclusion
+Comparing model 1, model 2, and odel 3's DIC
+, finding that model 1's DIC is the smallest, 486.1. So the answer is 
+*The DIC is the lowest for the origin model with all covariates. This is our preferred model*
+
+#### Question 5
+Using the model favored by the DIC, obtain  a Monte Carlo estimate of the posterior probability that the coefficient for 
+income is positive(greater than 0.0). Round your answer to two decimal places.
+
+```{r}
+print(summary(mod1_sim))
+print(mean(mod1_csim[,1] > 0.0))
+print(mean(mod1_csim[,1]))
+print(mean(mod1_csim[,2] ))
+print(mean(mod1_csim[,2] > 0.0))
+print(mean(mod1_csim[,]0))
+
+```
+
+
