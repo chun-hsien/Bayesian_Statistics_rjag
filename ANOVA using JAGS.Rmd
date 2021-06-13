@@ -84,15 +84,38 @@ Let's calculate the posterior mean for the parameters
 We can also look at the residuals to see if there are any obvious problems with our model choice.
 
 Let's use these posterior means of the parameters to compute residuals. The first thing we need are predictions for 
-each observations, call that yhat. And it'll be based on the posterior means for theses parameters for the first three means.
+each observations, call that yhat. And it'll be based on the posterior means for these parameters for the first three means.
+
+Let's compare those to the coefficients estimate that we got from the non-informative reference analysis.
+```{r}
+coefficients(lmod)
+```
+These results look pretty consistent. 
+THe mu estimates for the control group are similar between the two models.
 
 And we want to index these by their group indicator. So that comes from datajags the group variable.
+
+We can calculate the residuals as the differences between the data and the predictive values.
+Let's plot the residuals against their index or observation number and we don't see any patterns, That's pretty good.
 ```{r}
 yhat = pm_params[1:3][data_jags$grp]
 resid = data_jags$y - yhat
 plot(resid)
 ```
+Next, Let's create a residual plot, where the x-axis contains the predicted values.
 
-#### Result
+```{r}
+plot(yhat, resid)
+```
+Let's now look at the summary of the posterior distributions.
+```{r}
+summary(mod_sim)
+```
+If we want to create the hightest posterior density interval, an HPD
+
+```{r}
+HPDinterval(mod_csim)
+```
 
 `echo = FALSE` 
+
