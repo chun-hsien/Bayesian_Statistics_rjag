@@ -34,13 +34,7 @@ Fit a reference (noninformative) Bayesian linear model to the Anscombe data with
 
 What is the posterior mean estimate of the intercept in this model? Round your answer to one decimal place.
 
-```{r}
-lmod = lm(education ~ income + young + urban, data=Anscombe)
-summary(lmod)
-```
-
 The answer is **-2.868**
-
 
 #### Question 5
 In our reference analysis of the Anscombe data, the intercept is estimated to be negative. Does this parameter have a meaningful interpretation?
@@ -50,7 +44,6 @@ In our reference analysis of the Anscombe data, the intercept is estimated to be
 ### LESSON 7 PART B
 #### question 3
 Although the residual analysis of the Anscombe data showed no major problem that we will pursue, it is still worthwhile to compare some competing models. First, calculate and report the DIC for the original model (that you fit for the previous quiz). Round your answer to the nearest whole number.
-
 Now, using JAGS
 ```{r}
 library("rjags")
@@ -76,9 +69,7 @@ mod1_string = " model {
 } "
 
 
-
-set.seed(72)
-
+data(Anscombe)
 data_jags = as.list(Anscombe)
 
 params1 = c("b", "sig")
@@ -100,15 +91,9 @@ mod1_csim = do.call(rbind, mod1_sim) # combine multiple chains
 Before checking inferences from the model, we should perform convergence diagnostics for our markov chains.
 
 ```{r}
-plot(mod1_sim)
-```
-
-```{r}
 gelman.diag(mod1_sim)
 autocorr.diag(mod1_sim)
 autocorr.plot(mod1_sim)
-
-```{r}
 effectiveSize(mod1_sim)
 ```
 ```{r}
@@ -145,6 +130,8 @@ set.seed(72)
 
 # drop urban from Anscombe
 dat2 = subset(Anscombe, select = c("education", "income", "young"))
+# or you can do like this, it's much tidier
+# dat2_jags = as.list(Anscombe[,-4])
 
 dat2_jags = as.list(dat2)
 
@@ -176,6 +163,7 @@ Question 4
 In addition to dropping urban, add an interaction terms b3 * income[i] * youth[i] and fit model in JAGS.
 
 Calculating the DIC, if predictive performance is our criterion, which model would you conclude performs best ?
+
 ```{r}
 mod3_string = " model {
     for (i in 1:length(education)) {
@@ -209,13 +197,19 @@ inits1 = function() {
 
 mod3 = jags.model(textConnection(mod3_string), data=dat3_jags, inits=inits1, n.chains=3)
 update(mod3, 1000) # burn-in
+```
 
+```{r}
 mod3_sim = coda.samples(model=mod3,
                         variable.names=params3,
                         n.iter=5000)
+mod3_csim = do.call(rbind, mod3_sim)
+```
 
-mod3_csim = do.call(rbind, mod3_sim) # combine multiple chains
 
+
+
+```{r}
 # checking convergence
 gelman.diag(mod3_sim)
 autocorr.diag(mod3_sim)
@@ -230,11 +224,11 @@ Comparing model 1, model 2, and odel 3's DIC
 *The DIC is the lowest for the origin model with all covariates. This is our preferred model*
 
 #### Question 5
-Using the model favored by the DIC, obtain  a Monte Carlo estimate of the posterior probability that the coefficient for 
-income is positive(greater than 0.0). Round your answer to two decimal places.
+Using the model favored by the DIC, obtain  a Monte Carlo estimate of the posterior probability that the coefficient for income is positive(greater than 0.0). Round your answer to two decimal places.
+
+
 
 ```{r}
-summary(mod1_sim)
+print(mean(mod1_csim[,1]>0))
 ```
-
 
