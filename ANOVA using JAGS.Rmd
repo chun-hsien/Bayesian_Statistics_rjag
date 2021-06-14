@@ -107,6 +107,8 @@ Next, Let's create a residual plot, where the x-axis contains the predicted valu
 ```{r}
 plot(yhat, resid)
 ```
+# Not surprisingly, there are only three sets of predictions because there are three groups. But one thing that really stands out is that the variance for this group, the residual variance, is much higher than the residual variance for this group. As we mentioned earlier,  it might be appropriate to have a separate variance parameter for each group, just like we had a separate mu parameter for each group. The author leaves it as exercise.
+
 Let's now look at the summary of the posterior distributions.
 ```{r}
 summary(mod_sim)
@@ -116,6 +118,29 @@ If we want to create the hightest posterior density interval, an HPD
 ```{r}
 HPDinterval(mod_csim)
 ```
+Let's run that, and get a 95% HPDinterval for each of the parameters. Usually the HPDinterval is slightly smaller than the interval using equal tails. We can also give it another argument. 
+
+If we want to change the posterior probability associated with the interval, we can change it to, for example, .9, and we would get 90% posterior probability intervals.
+
+Now, suppose that in this experiment we are interested should know if one of the treatments increases the mean yield from the plants. It's clear from the posterior summary that treatment 1 does not increase, plant yield over the control group. But treatment 2 might increase. One major advantage of having a Bayesian model with Monte Carlo samples from the posterior is that it is easy to calculate posterior probabilities of hypothesis like this.
+
+
+So if we want to find out whether treatment 2 produces a larger yield than the control group, let's create an indicator variable. From our combined simulations Columns3 regers to mu 3. We want to see if mu 3 is bigger than mu 1. We take the average of that, that gives us the posterior probability, the codes is below: 
+```{r}
+mean(mod_csim[,3] > mod_csim[,1])
+```
+A very high posterior probability that the mean yield is greater for treatment in group two than the control group.
+
+Now suppose that treatment 2 would be costly to put into production and in order to be worthwhile.
+ 
+This treatment must increase the mean yield by at least 10%. What is the posterior probability that the increase is at least that?
+
+Well, we can easily do this with posterior samples again and we need mu 3 to be at least 10% larger than mu1, below is the codes
+```{r}
+mean(mod_csim[,3] > 1.1 * mod_csim[,1])
+```
+
+The posterior probability for this hypothesis is about 0.48.
 
 `echo = FALSE` 
 
