@@ -28,9 +28,17 @@ Let's look at a pairs scatterplot for each of the seven variables.
 ```{r}
 pairs(dat)
 ```
-One thing that stands out is that several of theses variables are strongly correlated with one another. For example, `osmo` and `gravity` appear to have a very close linear relationship. Collinearity between $$x$$ variables in linear regression models can cause truoube in statistical inference.
+One thing that stands out is that several of theses variables are strongly correlated with one another. For example, `osmo` and `gravity` appear to have a very close linear relationship. Collinearity between $x$ variables in linear regression models can cause truoube for statistical inference.
 
-
+Two correlated variables will compete for the ability to predict the response variable, leading to unstable estimates.
+This is not a problem for prediction of the response, if prediction is the end goal of the model. But if our objective is to discover how the variables relate to the response, we should avoid collinearity.
+We can more formally estimate the correlation among these variables using the `corrplot` package.
+```{r}
+library("corrplot")
+Cor = cor(dat)
+corrplot(Cor, type="upper", method="ellipse", tl.pos="d")
+corrplot(Cor, type="lower", method="number", col="black", add=TRUE, diag=FALSE, tl.pos="n", cl.pos="n")
+```
 **Knit**
 
 
