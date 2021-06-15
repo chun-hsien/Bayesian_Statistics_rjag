@@ -1,0 +1,43 @@
+---
+title: 'Lesson : logistic regression in JAGS'
+author: "Chu Hsien Wu"
+date: "2021年6月15日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Lesson 9 Logistic regression
+#### Lesson 9.2 
+#### Data
+Load package
+```{r}
+library("boot")
+data("urine")
+?urine
+head(urine)
+```
+Before we conduct analysis, let's remove those missing values.
+```{r}
+dat = na.omit(urine)
+dim(dat)
+```
+Let's look at a pairs scatterplot for each of the seven variables.
+```{r}
+pairs(dat)
+```
+One thing that stands out is that several of theses variables are strongly correlated with one another. For example, `osmo` and `gravity` appear to have a very close linear relationship. Collinearity between $$x$$ variables in linear regression models can cause truoube in statistical inference.
+
+
+**Knit**
+
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+`echo = FALSE` 

@@ -142,5 +142,3 @@ mean(mod_csim[,3] > 1.1 * mod_csim[,1])
 
 The posterior probability for this hypothesis is about 0.48.
 
-`echo = FALSE` 
-
