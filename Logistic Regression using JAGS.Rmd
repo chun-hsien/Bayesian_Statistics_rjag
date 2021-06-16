@@ -1,6 +1,6 @@
 ---
 title: 'Lesson : logistic regression in JAGS'
-author: "Chu Hsien Wu"
+author: "Chun Hsien Wu"
 date: "2021年6月15日"
 output: html_document
 ---
@@ -39,13 +39,103 @@ Cor = cor(dat)
 corrplot(Cor, type="upper", method="ellipse", tl.pos="d")
 corrplot(Cor, type="lower", method="number", col="black", add=TRUE, diag=FALSE, tl.pos="n", cl.pos="n")
 ```
-**Knit**
+```{r}
+X = scale(dat[,-1], center=TRUE, scale=TRUE)
+head(X[,"gravity"])
+```
+```{r}
+colMeans(X)
+```
+
+#### variable selection
+One primary goal of this analysis is to find out which variables are related to the presence of calcium oxalate crystals. This objective is often called “variable selection.” We have already seen one way to do this: fit several models that include different sets of variables and see which one has the best DIC. Another way to do this is to use a linear model where the priors for the $β$ coefficients favor values near 0 (indicating a weak relationship). This way, the burden of establishing association lies with the data. If there is not a strong signal, we assume it doesn’t exist.
+
+Rather than tailoring a prior for each individual $β$
+based on the scale its covariate takes values on, it is customary to subtract the mean and divide by the standard deviation for each variable.
+
+```{r}
+X = scale(dat[,-1], center=TRUE, scale=TRUE)
+head(X[,"gravity"])
+colMeans(X)
+```
+
+We can see that the values for these $x$ variables have changed, so that the column means for $x$ are all close to zeros.
+
+We can also calculate the column's standard deviations using the  `apply` function. Apply, where we want to apply this function, standard deviation to the columns which is the second index of the dimension of $x$. 
+The rows are index 1 and the columns are index 2.
+```{r}
+apply(X, 2, sd)
+```
+#### Model
+Our prior for the $β$ (which we’ll call b in the model) coefficients will be the double exponential (or Laplace) distribution, which as the name implies, is the exponential distribution with tails extending in the positive direction as well as the negative direction, with a sharp peak at 0. We can read more about it in the `JAGS` manual. The distribution looks like:
+```{r}
+ddexp = function(x, mu, tau) {
+  0.5*tau*exp(-tau*abs(x-mu)) 
+}
+curve(ddexp(x, mu=0.0, tau=1.0), from=-5.0, to=5.0, ylab="density", main="Double exponential\ndistribution") # double exponential distribution
+curve(dnorm(x, mean=0.0, sd=1.0), from=-5.0, to=5.0, lty=2, add=TRUE) # normal distribution
+legend("topright", legend=c("double exponential", "normal"), lty=c(1,2), bty="n")
+```
+```{r}
+library("rjags")
+```
+
+```{r}
+mod1_string = " model {
+    for (i in 1:length(y)) {
+        y[i] ~ dbern(p[i])
+        logit(p[i]) = int + b[1]*gravity[i] + b[2]*ph[i] + b[3]*osmo[i] + b[4]*cond[i] + b[5]*urea[i] + b[6]*calc[i]
+    }
+    int ~ dnorm(0.0, 1.0/25.0)
+    for (j in 1:6) {
+        b[j] ~ ddexp(0.0, sqrt(2.0)) # has variance 1.0
+    }
+} "
+
+set.seed(92)
+head(X)
+data_jags = list(y=dat$r, gravity=X[,"gravity"], ph=X[,"ph"], osmo=X[,"osmo"], cond=X[,"cond"], urea=X[,"urea"], calc=X[,"calc"])
+
+params = c("int", "b")
+
+mod1 = jags.model(textConnection(mod1_string), data=data_jags, n.chains=3)
+update(mod1, 1e3)
+
+mod1_sim = coda.samples(model=mod1,
+                        variable.names=params,
+                        n.iter=5e3)
+mod1_csim = as.mcmc(do.call(rbind, mod1_sim))
+
+## convergence diagnostics
+plot(mod1_sim, ask=TRUE)
+
+gelman.diag(mod1_sim)
+autocorr.diag(mod1_sim)
+autocorr.plot(mod1_sim)
+effectiveSize(mod1_sim)
+
+## calculate DIC
+dic1 = dic.samples(mod1, n.iter=1e3)
+```
+
+```{r}
+summary(mod1_sim)
+```
+
+```{r}
+par(mfrow=c(3,2))
+densplot(mod1_csim[,1:6], xlim=c(-3.0, 3.0))
+```
+
+```{r}
+colnames(X) # variable names
+```
 
 
 You can also embed plots, for example:
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+plot(pressure) 
 ```
 
 `echo = FALSE` 
