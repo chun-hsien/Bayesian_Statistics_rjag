@@ -1,0 +1,75 @@
+---
+title: "Lesson 10 Poisson regression"
+author: "Chun Hsien Wu"
+date: "2021年6月28日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Lesson 10.2
+#### Data
+For an example of Poisson regression, we’ll use the `badhealth` data set from the `COUNT` package in `R`.
+
+```{r}
+library("COUNT")
+```
+
+```{r}
+data("badhealth")
+head(badhealth)
+```
+It's also a good idea to check. To make sure we don't have any missing values. We are going to check using `is.na`, which will flag missing values, and we want to see if there any of those.
+```{r}
+any(is.na(badhealth))
+```
+```{r}
+plot(jitter(log(numvisit)) ~ jitter(age), data=badhealth, subset=badh==0, xlab="age", ylab="log(visits)")
+points(jitter(log(numvisit)) ~ jitter(age), data=badhealth, subset=badh==1,  col="red")
+```
+
+#### Model
+```{r}
+library("rjags")
+```
+```{r}
+mod_string = " model {
+    for (i in 1:length(numvisit)) {
+        numvisit[i] ~ dpois(lam[i])
+        log(lam[i]) = int + b_badh*badh[i] + b_age*age[i] + b_intx*age[i]*badh[i]
+    }
+    
+    int ~ dnorm(0.0, 1.0/1e6)
+    b_badh ~ dnorm(0.0, 1.0/1e4)
+    b_age ~ dnorm(0.0, 1.0/1e4)
+    b_intx ~ dnorm(0.0, 1.0/1e4)
+} "
+
+set.seed(102)
+
+data_jags = as.list(badhealth)
+
+params = c("int", "b_badh", "b_age", "b_intx")
+
+mod = jags.model(textConnection(mod_string), data=data_jags, n.chains=3)
+update(mod, 1e3)
+
+mod_sim = coda.samples(model=mod,
+                        variable.names=params,
+                        n.iter=5e3)
+mod_csim = as.mcmc(do.call(rbind, mod_sim))
+
+## convergence diagnostics
+plot(mod_sim)
+
+gelman.diag(mod_sim)
+autocorr.diag(mod_sim)
+autocorr.plot(mod_sim)
+effectiveSize(mod_sim)
+
+## compute DIC
+dic = dic.samples(mod, n.iter=1e3)
+```
+

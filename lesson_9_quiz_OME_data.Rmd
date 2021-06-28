@@ -1,0 +1,17 @@
+---
+title: "lesson 9 quizs"
+author: "Chun Hsien Wu"
+date: "2021年6月21日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### item 1
+What is the advantage of using a link function such as the logit transform for logistic regression?
+
+The answer is 
+
+**It ensures that the success probability $(E(y) )$ if $y$ is Bernoulli is between 0 and 1 without requiring any constraints on the $x$ variables or the $β$ coefficients.**
