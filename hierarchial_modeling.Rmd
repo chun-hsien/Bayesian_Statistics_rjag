@@ -1,0 +1,106 @@
+---
+title: "random intercept model"
+author: "Chun Hsien Wu"
+date: "2021年7月13日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#### Lesson 11 Hierarchial modeling
+
+```{r}
+library("car")
+data("Leinhardt")
+head(Leinhardt)
+dat = na.omit(Leinhardt)
+dat$logincome = log(dat$income)
+dat$loginfant = log(dat$infant)
+str(dat)
+```
+
+The ith response which is log of infant mortality comes from a normal distribution with mu sub i and we have the linear portion of the model connected to the mean of that normal likelihood.
+
+Previously, we had an intercept here as well as these two terms.
+The modification we're making for this hierarchical model is similar to what we did with the lambdas in the cholocate chip cookie hierarchical model.Each region now gets its own intercept. 
+
+**So for example if the 50th country is from region 3, the model will fit mu 3 using intercept 3.This is a nested index. Each of these intercepts will come from the same normal distribution.**
+
+So we will loop over j from 1 to the maximum number of regions, and each of these intercepts comes from a normal distribution with mean a0 and precision prec_a.Of course, for the next level in the hierarchy we need to produce priors for a0 and prec_a.
+
+The mean of this distribution represents the mean of all intercepts.And the precision is related to the variance of these intercepts. We'll use fairly standard priors here. We use a normal distribution centered on 0 for a0.
+
+**And we'll use an inverse gamma prior on the variance of that normal distribution, which implies a gamma prior on the precision.**
+Rather than monitor the precision, we're going ot monitor tau, which will be the standard deviation of this normal distribution.
+
+The remaining lines are the same as they were for the linear model before.
+
+We need to provide priors for each of the coefficients in the linear part of the model
+and  of course we need to produce a prior for the precison in the likelihood.
+```{r}
+library("rjags")
+mod_string = " model{
+	for (i in 1 : length(y)){
+		y[i] ~ dnorm(mu[i], prec)
+		mu[i] = a[ region[i]] + b[1] * log_income[i] + b[2] * is_oil[i]
+	}
+
+	for(j in 1 : max(region)){
+		a[j] ~ dnorm(a0, prec_a)
+	}
+
+	a0 ~ dnorm(0.0, 1.0/1.0e6)
+	prec_a ~ dgamma(1/2.0, 1*10.0/2.0)
+	tau = sqrt(1/ prec_a)
+
+	for(j in 1 : 2){
+		b[j] ~ dnorm(0.0, 1.0/1.0e6)
+	}
+	
+	prec ~ dgamma(5/2.0, 5*10/2.0)
+	sig = sqrt( 1.0 / prec)
+	
+} "
+
+set.seed(116)
+data_jags = list( y = dat$loginfant,  log_income=dat$logincome,
+				is_oil = as.numeric(dat$oil == "yes"), 
+				region = as.numeric(dat$region) )
+
+data_jags$is_oil
+table(data_jags$is_oil, data_jags$region)
+
+params = c("a0", "a", "b", "sigma", "tau")
+
+mod = jags.model(textConnection(mod_string), data = data_jags, n.chains =3)
+update(mod, 1e3) # burn - in
+
+mod_sim = coda.samples( model = mod, 
+							variable.names=params,
+							n.iter = 5e3)
+
+mod_csim = as.mcmc(do.call(rbind, mod_sim))
+plot(mod_sim, ask =TRUE)
+
+gelman.diag(mod_sim)
+autocorr.diag(mod_sim)
+autocorr.plot(mod_sim)
+effectiveSize(mod_sim)
+
+dic.samples(mod, n.iter = 1e3)
+
+summary(mod_sim)
+```
+Netx, let's compare this model with the old lineqr model from before using DIC, we 
+get about 221. Remember, the previous linear model that we fit, including the is_oil covariate, had a DIC value of about 229. So it appears that this model is an improvement over the non hierarchical one fit earlier.
+
+Notice also that the penalty term which is interpreted as the effective number of parameters is less than the actural number of parameters in this model. We have 9 parameters: a[1], a[2], a[3], a[4], a0, b[1], b[2], sig, and tau.
+
+*We have fewer effective parameters in this model* because they are sharing information or borrowing strength from each other in a hierarchical sturcture.
+
+*If we had skipped  the hierarchy and fit only one intercept, there would have been 4 paramters in this model. Intercept, log_income, is_oil, and tau*. If we had fit separate independent intercepts for each region, there would have been 7 parameters. This is actually pretty close to what we ended up with.
+Finally, let's look at our posterior summary of our inference from this model. Here are our posterior means for the four linear intercepts one for each region. The overall mean for those intercepts, *the standard deviation of the intercepts, that is how the intercepts from each region differ from one another, our coefficient for income b[1] and our coefficient for oil exporting countries b[2]. Each of these coefficients is smaller in magnitude than it was in the previous model, possibly because the region variable is now explaning some of the variability. 
+
+However, the signs of these coefficients remain the same as they were before. 
+#*In this particular model, the intercepts do not have a real intepretation, because they correspond to the mean response for a country that does not oil and has $0 dollars of log income per capita. In other words that would be $1 of income per capita, which is not the case for these county.*
